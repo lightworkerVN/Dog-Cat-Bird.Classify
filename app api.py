@@ -5,33 +5,45 @@ from PIL import Image
 import gdown
 import os
 
-st.title("🖼️ Phân loại ảnh với mô hình của bạn")
+# Hàm tải model từ Google Drive
+@st.cache_resource
+def load_model():
+    model_path = "animal_classifier_advanced.h5"
+    if not os.path.exists(model_path):
+        # ID file từ link Google Drive
+        gdown.download("https://drive.google.com/uc?id=1nBdEoBfxGHgRyITgFlLRDZn9SdXrBTgS", model_path, quiet=False)
+    return tf.keras.models.load_model(model_path)
 
-MODEL_PATH = "model.h5"
-MODEL_URL = "https://drive.google.com/uc?id=1nBdEoBfxGHgRyITgFlLRDZn9SdXrBTgS"
+model = load_model()
 
-# Tải model nếu chưa có
-if not os.path.exists(MODEL_PATH):
-    with st.spinner("Đang tải model từ Google Drive..."):
-        gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+# Hàm xử lý ảnh
+def preprocess_image(image):
+    image = image.resize((224, 224))  # Resize theo kích thước model (224x224)
+    image = np.array(image) / 255.0  # Chuẩn hóa
+    image = np.expand_dims(image, axis=0)  # Thêm batch dimension
+    return image
 
-# Load model
-model = tf.keras.models.load_model(MODEL_PATH)
-st.success("✅ Model đã sẵn sàng!")
+# Giao diện Streamlit
+st.title("Phân loại Chó, Mèo, Chim")
+st.write("Tải ảnh lên để dự đoán (jpg, png, jpeg)!")
 
-# Upload ảnh
-uploaded_file = st.file_uploader("Tải ảnh lên để phân loại", type=["jpg", "png", "jpeg"])
+# Widget tải file
+uploaded_file = st.file_uploader("Chọn ảnh...", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Ảnh đã tải lên", use_column_width=True)
+    try:
+        # Hiển thị ảnh
+        image = Image.open(uploaded_file).convert('RGB')
+        st.image(image, caption="Ảnh đã tải", width=300)
 
-    # Xử lý ảnh cho đúng input của model (giả sử là 224x224)
-    image_resized = image.resize((224, 224))
-    image_array = np.array(image_resized) / 255.0
-    image_array = np.expand_dims(image_array, axis=0)
+        # Xử lý và dự đoán
+        processed_image = preprocess_image(image)
+        predictions = model.predict(processed_image)
+        classes = ['Chó', 'Mèo', 'Chim']  # Cập nhật thứ tự lớp nếu cần
+        predicted_class = classes[np.argmax(predictions[0])]
+        confidence = np.max(predictions[0]) * 100
 
-    # Dự đoán
-    prediction = model.predict(image_array)
-    predicted_class = np.argmax(prediction, axis=1)[0]
-    st.write(f"🔍 Dự đoán: **Lớp {predicted_class}**")
+        # Hiển thị kết quả
+        st.write(f"Dự đoán: **{predicted_class}** ({confidence:.2f}%)")
+    except Exception as e:
+        st.error(f"Lỗi: {str(e)}")
