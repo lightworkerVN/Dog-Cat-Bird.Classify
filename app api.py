@@ -10,7 +10,7 @@ import os
 def load_model():
     model_path = "animal_classifier_advanced.h5"
     if not os.path.exists(model_path):
-        # ID file từ link Google Drive
+        # ID file từ Google Drive
         gdown.download("https://drive.google.com/uc?id=1nBdEoBfxGHgRyITgFlLRDZn9SdXrBTgS", model_path, quiet=False)
     return tf.keras.models.load_model(model_path)
 
@@ -18,7 +18,7 @@ model = load_model()
 
 # Hàm xử lý ảnh
 def preprocess_image(image):
-    image = image.resize((224, 224))  # Resize theo kích thước model (224x224)
+    image = image.resize((224, 224))  # Resize theo kích thước model
     image = np.array(image) / 255.0  # Chuẩn hóa
     image = np.expand_dims(image, axis=0)  # Thêm batch dimension
     return image
